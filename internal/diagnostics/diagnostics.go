@@ -18,6 +18,7 @@ const schemaVersion = "1"
 // Config controls probe scope. No probe sends user data in its request body.
 type Config struct {
 	Family       string
+	Language     string
 	ShowIP       bool
 	PublicIP     bool
 	Network      bool
@@ -30,6 +31,7 @@ type Report struct {
 	Schema      string     `json:"schema"`
 	Tool        string     `json:"tool"`
 	Version     string     `json:"version"`
+	Language    string     `json:"language"`
 	CollectedAt string     `json:"collected_at"`
 	Platform    Platform   `json:"platform"`
 	Privacy     Privacy    `json:"privacy"`
@@ -90,6 +92,11 @@ func Run(config Config) Report {
 	if config.Family == "" {
 		config.Family = "all"
 	}
+	if strings.ToLower(strings.TrimSpace(config.Language)) != "en" {
+		config.Language = "cn"
+	} else {
+		config.Language = "en"
+	}
 	if config.Timeout <= 0 {
 		config.Timeout = 10 * time.Second
 	}
@@ -117,6 +124,7 @@ func Run(config Config) Report {
 		Schema:      schemaVersion,
 		Tool:        "netdebug",
 		Version:     config.ToolVersion,
+		Language:    config.Language,
 		CollectedAt: time.Now().UTC().Format(time.RFC3339),
 		Platform:    Platform{OS: runtime.GOOS, Arch: runtime.GOARCH},
 		Privacy: Privacy{

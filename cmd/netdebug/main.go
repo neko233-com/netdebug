@@ -24,6 +24,10 @@ func main() {
 	var (
 		format       string
 		family       string
+		language     string
+		english      bool
+		family4      bool
+		family6      bool
 		showIP       bool
 		noPublicIP   bool
 		offline      bool
@@ -38,6 +42,11 @@ func main() {
 
 	flag.StringVar(&format, "format", "console", "output format: console, json, markdown")
 	flag.StringVar(&family, "family", "all", "IP family: all, 4, 6")
+	flag.StringVar(&language, "language", "cn", "output language: cn, en")
+	flag.StringVar(&language, "l", "cn", "shorthand for --language")
+	flag.BoolVar(&english, "E", false, "shorthand for --language en")
+	flag.BoolVar(&family4, "4", false, "shorthand for --family 4")
+	flag.BoolVar(&family6, "6", false, "shorthand for --family 6")
 	flag.BoolVar(&showIP, "show-ip", false, "show public IP addresses; hidden by default")
 	flag.BoolVar(&noPublicIP, "no-public-ip", false, "skip public IP probes")
 	flag.BoolVar(&offline, "offline", false, "local-only mode; skip all outbound probes")
@@ -63,12 +72,28 @@ func main() {
 	if markdownOut {
 		format = "markdown"
 	}
+	if english {
+		language = "en"
+	}
+	if family4 && family6 {
+		fail("use only one of -4 or -6")
+	}
+	if family4 {
+		family = "4"
+	}
+	if family6 {
+		family = "6"
+	}
 	format = strings.ToLower(strings.TrimSpace(format))
+	language = strings.ToLower(strings.TrimSpace(language))
 	if format != "console" && format != "json" && format != "markdown" {
 		fail("invalid --format %q; use console, json, or markdown", format)
 	}
 	if family != "all" && family != "4" && family != "6" {
 		fail("invalid --family %q; use all, 4, or 6", family)
+	}
+	if language != "cn" && language != "en" {
+		fail("invalid --language %q; use cn or en", language)
 	}
 	if timeout <= 0 {
 		fail("--timeout must be greater than zero")
@@ -79,6 +104,7 @@ func main() {
 
 	report := diagnostics.Run(diagnostics.Config{
 		Family:       family,
+		Language:     language,
 		ShowIP:       showIP,
 		PublicIP:     !noPublicIP,
 		Network:      !offline,
@@ -102,6 +128,7 @@ Usage:
 
 Examples:
   netdebug -y
+  netdebug --language en
   netdebug --format json
   netdebug --format markdown > report.md
   netdebug -4 --show-ip

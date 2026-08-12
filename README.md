@@ -8,7 +8,7 @@ Privacy-first network diagnostics CLI. Go. Zero runtime dependencies. Linux firs
 bash <(curl -Ls IP.Check.Place) -y
 ```
 
-It checks local interface counts, public IPv4/IPv6 reachability, DNS resolution, and HTTPS connectivity. Output supports polished console, JSON, and Markdown formats.
+It checks local interface counts, public IPv4/IPv6 reachability, DNS resolution, and HTTPS connectivity. Output supports polished console, JSON, and Markdown formats in Chinese or English.
 
 ## Install
 
@@ -41,6 +41,11 @@ Update probes official GitHub and configured public mirror routes, selects the f
 # Console report; -y is accepted for compatibility and installs nothing.
 netdebug -y
 
+# Chinese is the default; English output.
+netdebug --language en
+netdebug -l en
+netdebug -E
+
 # Machine-readable output.
 netdebug --format json
 
@@ -60,6 +65,24 @@ netdebug --no-public-ip
 # Local-only mode: no outbound network requests.
 netdebug --offline
 ```
+
+`--language cn` is the default. JSON keeps stable English field names and status enums; `language` identifies the display locale.
+
+## Scope comparison
+
+`IP.Check.Place` / `IPQuality` is a broader, provider-heavy audit. `netdebug` is a smaller privacy-first baseline with structured output and no runtime dependencies.
+
+| Area | Reference script | netdebug |
+|---|---|---|
+| Local network, DNS, HTTPS | Yes | Yes |
+| Multi-database IP cross-check | Many providers | Optional `ipwho.is` profile |
+| Streaming / AI unlock | Yes | Not yet |
+| Port 25 / DNSBL | Yes | Not yet |
+| Output | Rich terminal, JSON options | Console, JSON, Markdown; `cn` / `en` |
+| Dependencies | Installs shell tools with `-y` | None at runtime |
+| Privacy posture | Includes telemetry/report-link paths | No telemetry, upload, or report links |
+
+Observed comparison on the authorized test host: current reference script (`v2026-08-09`) took about 50 seconds and produced about 560 lines / 114 KB, then exited with code 1. It provides broader coverage, but has more external dependencies and provider failure points. `netdebug` favors bounded probes, stable machine output, and explicit opt-in intelligence.
 
 ## Privacy model
 

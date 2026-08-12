@@ -56,6 +56,24 @@ func TestConsoleRender(t *testing.T) {
 	}
 }
 
+func TestBilingualRender(t *testing.T) {
+	for _, test := range []struct {
+		language string
+		want     string
+	}{
+		{language: "cn", want: "隐私"},
+		{language: "en", want: "Privacy"},
+	} {
+		report := sampleReport()
+		report.Language = test.language
+		var output bytes.Buffer
+		renderConsole(&output, report, false)
+		if !strings.Contains(output.String(), test.want) {
+			t.Fatalf("language %s missing %q: %s", test.language, test.want, output.String())
+		}
+	}
+}
+
 func TestProfileOutputHidesAddress(t *testing.T) {
 	report := sampleReport()
 	address := report.PublicIPv4.Address

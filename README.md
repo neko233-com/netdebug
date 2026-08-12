@@ -22,7 +22,7 @@ curl -fsSL https://raw.githubusercontent.com/neko233-com/netdebug/main/install.s
 PowerShell:
 
 ```powershell
-irm https://raw.githubusercontent.com/neko233-com/netdebug/main/install.ps1 | iex
+$t = Join-Path $env:TEMP ("netdebug-install-" + [guid]::NewGuid().ToString("N") + ".ps1"); Invoke-WebRequest -UseBasicParsing -Uri https://raw.githubusercontent.com/neko233-com/netdebug/main/install.ps1 -OutFile $t; & ([scriptblock]::Create((Get-Content -Raw -LiteralPath $t))); Remove-Item $t
 ```
 
 One-line install and report, equivalent to the reference command:
@@ -35,8 +35,10 @@ curl -fsSL https://raw.githubusercontent.com/neko233-com/netdebug/main/install.s
 PowerShell:
 
 ```powershell
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/neko233-com/netdebug/main/install.ps1))) -Run
+$t = Join-Path $env:TEMP ("netdebug-install-" + [guid]::NewGuid().ToString("N") + ".ps1"); Invoke-WebRequest -UseBasicParsing -Uri https://raw.githubusercontent.com/neko233-com/netdebug/main/install.ps1 -OutFile $t; & ([scriptblock]::Create((Get-Content -Raw -LiteralPath $t))) -Run; Remove-Item $t
 ```
+
+Use the explicit `Invoke-WebRequest` form on Windows PowerShell 5.1 or when `irm` returns an empty value in a customized profile.
 
 After installation, simply running `netdebug` prints the same console report.
 

@@ -56,6 +56,15 @@ func TestConsoleRender(t *testing.T) {
 	}
 }
 
+func TestConsoleRenderShowsAddressWhenCollected(t *testing.T) {
+	report := sampleReport()
+	var output bytes.Buffer
+	renderConsole(&output, report, false)
+	if !strings.Contains(output.String(), report.PublicIPv4.Address) || !strings.Contains(output.String(), "local") {
+		t.Fatalf("console output did not show collected address: %s", output.String())
+	}
+}
+
 func TestBilingualRender(t *testing.T) {
 	for _, test := range []struct {
 		language string

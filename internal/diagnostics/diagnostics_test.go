@@ -3,8 +3,16 @@ package diagnostics
 import (
 	"fmt"
 	"net"
+	"regexp"
 	"testing"
 )
+
+func TestReportTimestampFormat(t *testing.T) {
+	report := Run(Config{Network: false})
+	if !regexp.MustCompile(`^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}$`).MatchString(report.CollectedAt) {
+		t.Fatalf("unexpected collected_at format: %q", report.CollectedAt)
+	}
+}
 
 func TestParseIPResponse(t *testing.T) {
 	ipv6 := fmt.Sprintf("%x:%x::%x", 0x2001, 0xdb8, 0x10)

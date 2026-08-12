@@ -52,8 +52,12 @@ netdebug --format json
 # Markdown report.
 netdebug --format markdown > report.md
 
-# IPv4 only, explicitly show detected public IPv4.
-netdebug -4 --show-ip
+# IPv4 only; console prints the detected public IPv4 by default.
+netdebug -4
+
+# Show IP in JSON/Markdown too; hide it everywhere when needed.
+netdebug --format json --show-ip
+netdebug --hide-ip
 
 # Opt-in IP profile: ASN, organization, coarse location, network type,
 # provider flags when available, and clearly-labelled heuristic risk.
@@ -66,7 +70,7 @@ netdebug --no-public-ip
 netdebug --offline
 ```
 
-`--language cn` is the default. JSON keeps stable English field names and status enums; `language` identifies the display locale.
+`--language cn` is the default. JSON keeps stable English field names and status enums; `language` identifies the display locale. `collected_at` uses UTC format `yyyy-MM-dd HH:mm:ss,SSS`.
 
 ## Scope comparison
 
@@ -90,7 +94,7 @@ Observed comparison on the authorized test host: current reference script (`v202
 - No report links.
 - No account, proxy credential, hostname, interface address, or local address sent in request payloads.
 - Environment proxy settings are not inherited, so proxy credentials are not forwarded.
-- Public IP is hidden in console/JSON/Markdown by default; `--show-ip` is explicit.
+- Console prints the detected public IP locally by default, matching the reference report style; it is never uploaded. JSON/Markdown hide it by default. Use `--show-ip` for every format or `--hide-ip` everywhere.
 - Public IP probe services necessarily observe the transport source IP. Use `--no-public-ip` to skip those probes.
 - `--offline` skips every outbound probe and inspects only local interface counts.
 - `--intelligence` is opt-in and contacts [`ipwho.is`](https://ipwhois.io/documentation) for ASN, organization, coarse location, and network metadata. Its free response may not include threat flags.

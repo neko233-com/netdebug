@@ -15,6 +15,8 @@ import (
 
 const schemaVersion = "1"
 
+const reportTimeLayout = "2006-01-02 15:04:05,000"
+
 // Config controls probe scope. No probe sends user data in its request body.
 type Config struct {
 	Family       string
@@ -125,7 +127,7 @@ func Run(config Config) Report {
 		Tool:        "netdebug",
 		Version:     config.ToolVersion,
 		Language:    config.Language,
-		CollectedAt: time.Now().UTC().Format(time.RFC3339),
+		CollectedAt: time.Now().UTC().Format(reportTimeLayout),
 		Platform:    Platform{OS: runtime.GOOS, Arch: runtime.GOARCH},
 		Privacy: Privacy{
 			Telemetry:           false,
@@ -354,5 +356,5 @@ func newHTTPClient() *http.Client {
 }
 
 func versionForHeader() string {
-	return "0.1.3"
+	return "0.1.4"
 }

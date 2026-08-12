@@ -15,7 +15,7 @@ type Options struct {
 }
 
 type translations struct {
-	subtitle, privacy, noTelemetry, noUpload, hidden                                           string
+	subtitle, privacy, noTelemetry, noUpload, hidden, ipVisible                                string
 	network, interfaces, total, up, loopback                                                   string
 	publicIPv4, publicIPv6, ipProfile, optIn                                                   string
 	provider, publicIP, asn, organization, location, typeLabel, risk, threatFlags, unavailable string
@@ -29,7 +29,7 @@ type translations struct {
 func translationsFor(language string) translations {
 	if strings.EqualFold(strings.TrimSpace(language), "cn") {
 		return translations{
-			subtitle: "隐私优先网络诊断", privacy: "隐私", noTelemetry: "无遥测", noUpload: "不上传报告", hidden: "IP 默认隐藏",
+			subtitle: "隐私优先网络诊断", privacy: "隐私", noTelemetry: "无遥测", noUpload: "不上传报告", hidden: "IP 默认隐藏", ipVisible: "公网 IP 仅本地显示",
 			network: "网络", interfaces: "网卡", total: "总计", up: "在线", loopback: "回环",
 			publicIPv4: "公网 IPv4", publicIPv6: "公网 IPv6", ipProfile: "IP 情报（主动开启）", optIn: "主动开启",
 			provider: "数据源", publicIP: "公网 IP", asn: "ASN", organization: "组织", location: "位置", typeLabel: "类型",
@@ -46,7 +46,7 @@ func translationsFor(language string) translations {
 	}
 	return translations{
 		subtitle: "privacy-first network diagnostics", privacy: "Privacy", noTelemetry: "no telemetry",
-		noUpload: "no report upload", hidden: "IP hidden by default",
+		noUpload: "no report upload", hidden: "IP hidden by default", ipVisible: "public IP displayed locally only",
 		network: "Network", interfaces: "Interfaces", total: "total", up: "up", loopback: "loopback",
 		publicIPv4: "Public IPv4", publicIPv6: "Public IPv6", ipProfile: "IP Profile", optIn: "opt-in",
 		provider: "Provider", publicIP: "Public IP", asn: "ASN", organization: "Organization", location: "Location",
@@ -96,7 +96,11 @@ func renderConsole(writer io.Writer, report diagnostics.Report, color bool) {
 
 	consoleSection(writer, c, text.privacy)
 	fmt.Fprintf(writer, "  %s  %s  %s\n", statusBadge("pass", text, c), text.noTelemetry, text.noUpload)
-	fmt.Fprintf(writer, "  %s · %s: %d\n", text.hidden, text.endpoints, len(report.Privacy.Destinations))
+	privacyIP := text.hidden
+	if hasVisibleIP(report) {
+		privacyIP = text.ipVisible
+	}
+	fmt.Fprintf(writer, "  %s · %s: %d\n", privacyIP, text.endpoints, len(report.Privacy.Destinations))
 
 	consoleSection(writer, c, text.network)
 	fmt.Fprintf(writer, "  %-12s %d %s · %d %s · %d %s\n", text.interfaces, report.Network.Interfaces, text.total, report.Network.Up, text.up, report.Network.Loopback, text.loopback)
@@ -158,6 +162,12 @@ func renderConsole(writer io.Writer, report diagnostics.Report, color bool) {
 func consoleSection(writer io.Writer, color func(string, string) string, title string) {
 	fmt.Fprintf(writer, "\n%s %s\n", color("1;36", "◆"), color("1;36", title))
 	fmt.Fprintf(writer, "  %s\n", color("2", "────────────────────────────────────────────────────────────"))
+}
+
+func hasVisibleIP(report diagnostics.Report) bool {
+	return (report.PublicIPv4 != nil && report.PublicIPv4.Address != "") ||
+		(report.PublicIPv6 != nil && report.PublicIPv6.Address != "") ||
+		(report.IPProfile != nil && report.IPProfile.Address != "")
 }
 
 func renderMarkdown(writer io.Writer, report diagnostics.Report) error {

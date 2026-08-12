@@ -14,7 +14,7 @@ import (
 	"github.com/neko233-com/netdebug/internal/updater"
 )
 
-var version = "0.1.3"
+var version = "0.1.4"
 
 func main() {
 	if len(os.Args) > 1 && os.Args[1] == "update" {
@@ -29,6 +29,7 @@ func main() {
 		family4      bool
 		family6      bool
 		showIP       bool
+		hideIP       bool
 		noPublicIP   bool
 		offline      bool
 		intelligence bool
@@ -47,7 +48,8 @@ func main() {
 	flag.BoolVar(&english, "E", false, "shorthand for --language en")
 	flag.BoolVar(&family4, "4", false, "shorthand for --family 4")
 	flag.BoolVar(&family6, "6", false, "shorthand for --family 6")
-	flag.BoolVar(&showIP, "show-ip", false, "show public IP addresses; hidden by default")
+	flag.BoolVar(&showIP, "show-ip", false, "show public IP addresses in every output format")
+	flag.BoolVar(&hideIP, "hide-ip", false, "hide public IP addresses, including console output")
 	flag.BoolVar(&noPublicIP, "no-public-ip", false, "skip public IP probes")
 	flag.BoolVar(&offline, "offline", false, "local-only mode; skip all outbound probes")
 	flag.BoolVar(&intelligence, "intelligence", false, "query optional IP ASN/location/type intelligence")
@@ -95,6 +97,9 @@ func main() {
 	if language != "cn" && language != "en" {
 		fail("invalid --language %q; use cn or en", language)
 	}
+	if showIP && hideIP {
+		fail("use only one of --show-ip or --hide-ip")
+	}
 	if timeout <= 0 {
 		fail("--timeout must be greater than zero")
 	}
@@ -105,7 +110,7 @@ func main() {
 	report := diagnostics.Run(diagnostics.Config{
 		Family:       family,
 		Language:     language,
-		ShowIP:       showIP,
+		ShowIP:       showIP || (format == "console" && !hideIP),
 		PublicIP:     !noPublicIP,
 		Network:      !offline,
 		Intelligence: intelligence,

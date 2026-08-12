@@ -1,0 +1,47 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.x'
+          cache: false
+      - name: Build release archives
+        shell: bash
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          version="${TAG#v}"
+          mkdir -p dist
+          for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64; do
+            os="${target%/*}"
+            arch="${target#*/}"
+            work="$(mktemp -d)"
+            GOOS="$os" GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -ldflags "-X main.version=$TAG" -o "$work/netdebug" ./cmd/netdebug
+            tar -czf "dist/netdebug_${version}_${os}_${arch}.tar.gz" -C "$work" netdebug
+            rm -rf "$work"
+          done
+          for arch in amd64 arm64; do
+            work="$(mktemp -d)"
+            GOOS=windows GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -ldflags "-X main.version=$TAG" -o "$work/netdebug.exe" ./cmd/netdebug
+            (cd "$work" && zip -q "$GITHUB_WORKSPACE/dist/netdebug_${version}_windows_${arch}.zip" netdebug.exe)
+            rm -rf "$work"
+          done
+          (cd dist && sha256sum * > checksums.txt)
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: gh release create "$TAG" dist/* --title "netdebug $TAG" --generate-notes

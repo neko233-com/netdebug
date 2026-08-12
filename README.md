@@ -14,9 +14,26 @@ It checks local interface counts, public IPv4/IPv6 reachability, DNS resolution,
 
 ```bash
 go install github.com/neko233-com/netdebug/cmd/netdebug@latest
+
+# Linux/macOS: HTTPS download, mirror speed probe, SHA-256 verification.
+curl -fsSL https://raw.githubusercontent.com/neko233-com/netdebug/main/install.sh | sh
 ```
 
-Or download a release binary for Linux, Windows, or macOS.
+PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/neko233-com/netdebug/main/install.ps1 | iex
+```
+
+Installers are idempotent. They install release binaries, verify `checksums.txt`, register `NETDEBUG_HOME`, and update PATH for future shells. Set `NETDEBUG_DIRECT_ONLY=1` to disable mirrors, or `NETDEBUG_UPDATE_MIRRORS` to provide comma-separated mirror prefixes.
+
+## Update
+
+```bash
+netdebug update
+```
+
+Update probes official GitHub and configured public mirror routes, selects the fastest reachable route, downloads the archive and checksum through that route, then verifies SHA-256 before replacement. Use `NETDEBUG_DIRECT_ONLY=1 netdebug update` to force official GitHub only. A mirror can improve reachability but is not an authenticity authority; checksum verification remains mandatory.
 
 ## Usage
 

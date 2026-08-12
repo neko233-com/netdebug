@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -10,11 +11,16 @@ import (
 
 	"github.com/neko233-com/netdebug/internal/diagnostics"
 	"github.com/neko233-com/netdebug/internal/output"
+	"github.com/neko233-com/netdebug/internal/updater"
 )
 
-const version = "0.1.0"
+var version = "0.1.0"
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "update" {
+		runUpdate(os.Args[2:])
+		return
+	}
 	var (
 		format       string
 		family       string
@@ -92,6 +98,7 @@ func usage() {
 
 Usage:
   netdebug [flags]
+  netdebug update
 
 Examples:
   netdebug -y
@@ -102,6 +109,25 @@ Examples:
 Flags:
 `, version)
 	flag.PrintDefaults()
+}
+
+func runUpdate(args []string) {
+	if len(args) > 0 {
+		fail("update does not accept positional arguments")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+	result, err := updater.Run(ctx, updater.Options{Repo: "neko233-com/netdebug", CurrentVersion: version})
+	if err != nil {
+		fail("update: %v", err)
+	}
+	if !result.Updated {
+		fmt.Printf("netdebug %s already latest (%s)\n", result.CurrentVersion, result.LatestVersion)
+		fmt.Printf("update route: %s\n", result.Route)
+		return
+	}
+	fmt.Printf("netdebug updated: %s -> %s\n", result.CurrentVersion, result.LatestVersion)
+	fmt.Printf("update route: %s\n", result.Route)
 }
 
 func fail(format string, args ...any) {

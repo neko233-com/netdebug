@@ -17,27 +17,29 @@ const schemaVersion = "1"
 
 // Config controls probe scope. No probe sends user data in its request body.
 type Config struct {
-	Family      string
-	ShowIP      bool
-	PublicIP    bool
-	Network     bool
-	Timeout     time.Duration
-	ToolVersion string
+	Family       string
+	ShowIP       bool
+	PublicIP     bool
+	Network      bool
+	Intelligence bool
+	Timeout      time.Duration
+	ToolVersion  string
 }
 
 type Report struct {
-	Schema      string   `json:"schema"`
-	Tool        string   `json:"tool"`
-	Version     string   `json:"version"`
-	CollectedAt string   `json:"collected_at"`
-	Platform    Platform `json:"platform"`
-	Privacy     Privacy  `json:"privacy"`
-	Network     Network  `json:"network"`
-	PublicIPv4  *IPProbe `json:"public_ipv4,omitempty"`
-	PublicIPv6  *IPProbe `json:"public_ipv6,omitempty"`
-	DNS         []Probe  `json:"dns"`
-	HTTPS       []Probe  `json:"https"`
-	Summary     Summary  `json:"summary"`
+	Schema      string     `json:"schema"`
+	Tool        string     `json:"tool"`
+	Version     string     `json:"version"`
+	CollectedAt string     `json:"collected_at"`
+	Platform    Platform   `json:"platform"`
+	Privacy     Privacy    `json:"privacy"`
+	Network     Network    `json:"network"`
+	PublicIPv4  *IPProbe   `json:"public_ipv4,omitempty"`
+	PublicIPv6  *IPProbe   `json:"public_ipv6,omitempty"`
+	IPProfile   *IPProfile `json:"ip_profile,omitempty"`
+	DNS         []Probe    `json:"dns"`
+	HTTPS       []Probe    `json:"https"`
+	Summary     Summary    `json:"summary"`
 }
 
 type Platform struct {
@@ -97,6 +99,19 @@ func Run(config Config) Report {
 
 	ctx, cancel := context.WithTimeout(context.Background(), config.Timeout)
 	defer cancel()
+	destinations := []string{}
+	if config.Network {
+		destinations = append(destinations, "example.com", "cloudflare.com", "www.cloudflare.com")
+		if config.PublicIP && config.Family != "6" {
+			destinations = append(destinations, "api4.ipify.org")
+		}
+		if config.PublicIP && config.Family != "4" {
+			destinations = append(destinations, "api6.ipify.org")
+		}
+		if config.Intelligence {
+			destinations = append(destinations, "ipwho.is")
+		}
+	}
 
 	report := Report{
 		Schema:      schemaVersion,
@@ -109,14 +124,7 @@ func Run(config Config) Report {
 			ReportUpload:        false,
 			UserDataInRequests:  false,
 			PublicIPProbeNotice: "probe services can observe the transport source IP; no IP is sent as payload",
-			Destinations: []string{
-				"api4.ipify.org",
-				"api6.ipify.org",
-				"example.com",
-				"www.cloudflare.com",
-				"cloudflare.com",
-				"example.net",
-			},
+			Destinations:        destinations,
 		},
 		Network: inspectInterfaces(),
 		DNS:     []Probe{},
@@ -131,8 +139,6 @@ func Run(config Config) Report {
 			request(ctx, "https://www.cloudflare.com/cdn-cgi/trace"),
 			request(ctx, "https://example.com/"),
 		}
-	} else {
-		report.Privacy.Destinations = []string{}
 	}
 
 	if config.Network && config.PublicIP && config.Family != "6" {
@@ -142,6 +148,10 @@ func Run(config Config) Report {
 	if config.Network && config.PublicIP && config.Family != "4" {
 		probe := publicIP(ctx, "https://api6.ipify.org?format=json", config.ShowIP)
 		report.PublicIPv6 = &probe
+	}
+	if config.Network && config.PublicIP && config.Intelligence {
+		profile := ipProfile(ctx, config.ShowIP)
+		report.IPProfile = &profile
 	}
 	report.Summary = summarize(report)
 	return report
@@ -288,6 +298,9 @@ func summarize(report Report) Summary {
 		if probe != nil {
 			add(probe.Status)
 		}
+	}
+	if report.IPProfile != nil {
+		add(report.IPProfile.Status)
 	}
 	return summary
 }

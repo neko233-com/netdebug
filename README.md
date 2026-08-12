@@ -33,6 +33,10 @@ netdebug --format markdown > report.md
 # IPv4 only, explicitly show detected public IPv4.
 netdebug -4 --show-ip
 
+# Opt-in IP profile: ASN, organization, coarse location, network type,
+# provider flags when available, and clearly-labelled heuristic risk.
+netdebug --intelligence
+
 # Avoid public IP probes entirely.
 netdebug --no-public-ip
 
@@ -49,8 +53,10 @@ netdebug --offline
 - Public IP is hidden in console/JSON/Markdown by default; `--show-ip` is explicit.
 - Public IP probe services necessarily observe the transport source IP. Use `--no-public-ip` to skip those probes.
 - `--offline` skips every outbound probe and inspects only local interface counts.
-- Only fixed endpoints are contacted: `api4.ipify.org`, `api6.ipify.org`, `example.com`, `www.cloudflare.com`, and DNS lookups for `example.com` / `cloudflare.com`.
-- No geo-IP, blacklist, media-unlock, or risk-scoring provider is queried.
+- `--intelligence` is opt-in and contacts [`ipwho.is`](https://ipwhois.io/documentation) for ASN, organization, coarse location, and network metadata. Its free response may not include threat flags.
+- Risk score is heuristic unless provider security flags are present; it is not a blacklist or fraud verdict.
+- Only fixed endpoints are contacted: `api4.ipify.org`, `api6.ipify.org`, `example.com`, `www.cloudflare.com`, and DNS lookups for `example.com` / `cloudflare.com`; `--intelligence` additionally contacts `ipwho.is`.
+- Without `--intelligence`, no geo-IP, blacklist, media-unlock, or risk-scoring provider is queried.
 
 Network access remains visible to the endpoints listed above. Review or disable probes before using the command in a restricted environment.
 

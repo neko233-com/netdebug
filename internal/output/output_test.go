@@ -55,3 +55,24 @@ func TestConsoleRender(t *testing.T) {
 		t.Fatalf("unexpected console output: %s", output.String())
 	}
 }
+
+func TestProfileOutputHidesAddress(t *testing.T) {
+	report := sampleReport()
+	address := report.PublicIPv4.Address
+	report.PublicIPv4.Address = ""
+	report.IPProfile = &diagnostics.IPProfile{
+		Status: "pass", Source: "ipwho.is", Address: "", ASN: "AS64500",
+		Organization: "Example Hosting", City: "Example City", Country: "Exampleland",
+		Classification: "hosting", Risk: &diagnostics.RiskAssessment{Score: 55, Level: "medium-high", Method: "heuristic"},
+	}
+	var output bytes.Buffer
+	if err := Render(&output, report, Options{Format: "json"}); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(output.String(), address) {
+		t.Fatal("profile output leaked hidden address")
+	}
+	if !strings.Contains(output.String(), "AS64500") || !strings.Contains(output.String(), "medium-high") {
+		t.Fatalf("profile output missing fields: %s", output.String())
+	}
+}

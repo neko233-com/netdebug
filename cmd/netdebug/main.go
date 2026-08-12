@@ -16,17 +16,18 @@ const version = "0.1.0"
 
 func main() {
 	var (
-		format      string
-		family      string
-		showIP      bool
-		noPublicIP  bool
-		offline     bool
-		noColor     bool
-		jsonOutput  bool
-		markdownOut bool
-		compatYes   bool
-		timeout     time.Duration
-		showVersion bool
+		format       string
+		family       string
+		showIP       bool
+		noPublicIP   bool
+		offline      bool
+		intelligence bool
+		noColor      bool
+		jsonOutput   bool
+		markdownOut  bool
+		compatYes    bool
+		timeout      time.Duration
+		showVersion  bool
 	)
 
 	flag.StringVar(&format, "format", "console", "output format: console, json, markdown")
@@ -34,6 +35,7 @@ func main() {
 	flag.BoolVar(&showIP, "show-ip", false, "show public IP addresses; hidden by default")
 	flag.BoolVar(&noPublicIP, "no-public-ip", false, "skip public IP probes")
 	flag.BoolVar(&offline, "offline", false, "local-only mode; skip all outbound probes")
+	flag.BoolVar(&intelligence, "intelligence", false, "query optional IP ASN/location/type intelligence")
 	flag.BoolVar(&noColor, "no-color", false, "disable ANSI colors in console output")
 	flag.BoolVar(&jsonOutput, "j", false, "shorthand for --format json")
 	flag.BoolVar(&markdownOut, "m", false, "shorthand for --format markdown")
@@ -65,14 +67,18 @@ func main() {
 	if timeout <= 0 {
 		fail("--timeout must be greater than zero")
 	}
+	if intelligence && (noPublicIP || offline) {
+		fail("--intelligence requires outbound public-IP probing; remove --no-public-ip/--offline")
+	}
 
 	report := diagnostics.Run(diagnostics.Config{
-		Family:      family,
-		ShowIP:      showIP,
-		PublicIP:    !noPublicIP,
-		Network:     !offline,
-		Timeout:     timeout,
-		ToolVersion: version,
+		Family:       family,
+		ShowIP:       showIP,
+		PublicIP:     !noPublicIP,
+		Network:      !offline,
+		Intelligence: intelligence,
+		Timeout:      timeout,
+		ToolVersion:  version,
 	})
 
 	color := format == "console" && !noColor && os.Getenv("NO_COLOR") == "" && isTerminal(os.Stdout)

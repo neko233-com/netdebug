@@ -74,6 +74,20 @@ func TestBilingualRender(t *testing.T) {
 	}
 }
 
+func TestConsoleProfileRendersRiskBar(t *testing.T) {
+	report := sampleReport()
+	report.Language = "cn"
+	report.IPProfile = &diagnostics.IPProfile{
+		Status: "pass", Source: "ipwho.is", Classification: "hosting",
+		Risk: &diagnostics.RiskAssessment{Score: 55, Level: "medium-high", Method: "heuristic"},
+	}
+	var output bytes.Buffer
+	renderConsole(&output, report, false)
+	if !strings.Contains(output.String(), "████") || !strings.Contains(output.String(), "中高风险") {
+		t.Fatalf("console profile missing risk visualization: %s", output.String())
+	}
+}
+
 func TestProfileOutputHidesAddress(t *testing.T) {
 	report := sampleReport()
 	address := report.PublicIPv4.Address

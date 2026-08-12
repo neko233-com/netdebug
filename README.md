@@ -8,7 +8,7 @@ Privacy-first network diagnostics CLI. Go. Zero runtime dependencies. Linux firs
 bash <(curl -Ls IP.Check.Place) -y
 ```
 
-It checks local interface counts, public IPv4/IPv6 reachability, DNS resolution, and HTTPS connectivity. Output supports polished console, JSON, and Markdown formats in Chinese or English.
+It checks local interface counts, public IPv4/IPv6 reachability, DNS resolution, and HTTPS connectivity. Output supports a reference-style console dashboard with sections, status badges, latency tables, and risk bars, plus JSON and Markdown formats in Chinese or English.
 
 ## Install
 

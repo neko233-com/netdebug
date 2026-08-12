@@ -23,6 +23,7 @@ type translations struct {
 	platform, collected, telemetry, reportUpload, userData, disabled, no, localOnly            string
 	statusPass, statusWarn, statusFail, available                                              string
 	result, detail, latency, field, value, status, privacyNotice                               string
+	endpoints, noProbes, version, method, score, checks                                        string
 }
 
 func translationsFor(language string) translations {
@@ -39,6 +40,7 @@ func translationsFor(language string) translations {
 			disabled: "禁用", no: "否", localOnly: "仅本机统计",
 			statusPass: "✓ 通过", statusWarn: "! 警告", statusFail: "× 失败", available: "可用（已隐藏）",
 			result: "结果", detail: "详情", latency: "延迟", field: "字段", value: "值", status: "状态",
+			endpoints: "固定端点", noProbes: "暂无探针结果", version: "版本", method: "方法", score: "评分", checks: "检查项",
 			privacyNotice: "公网 IP 探针可观察传输源 IP；netdebug 不把 IP 作为请求数据发送、不存储结果，也不创建报告链接。",
 		}
 	}
@@ -55,6 +57,7 @@ func translationsFor(language string) translations {
 		userData: "User data in requests", disabled: "disabled", no: "no", localOnly: "local counts only",
 		statusPass: "✓ pass", statusWarn: "! warn", statusFail: "× fail", available: "available (hidden)",
 		result: "Result", detail: "Detail", latency: "Latency", field: "Field", value: "Value", status: "Status",
+		endpoints: "Fixed endpoints", noProbes: "no probe results", version: "Version", method: "Method", score: "Score", checks: "Checks",
 		privacyNotice: "Public IP probe services can observe the transport source IP. netdebug does not send IP as request data, store results, or create report links.",
 	}
 }
@@ -85,31 +88,36 @@ func renderConsole(writer io.Writer, report diagnostics.Report, color bool) {
 		}
 		return "\033[" + code + "m" + value + "\033[0m"
 	}
-	line := "────────────────────────────────────────────────────────────"
+	line := strings.Repeat("─", 66)
 	fmt.Fprintln(writer, c("36", "╭"+line+"╮"))
 	fmt.Fprintf(writer, "│ %s  %s\n", c("1;36", "netdebug"), c("2", text.subtitle))
-	fmt.Fprintf(writer, "│ %s: %s/%s · %s: %s\n", text.platform, report.Platform.OS, report.Platform.Arch, text.collected, report.CollectedAt)
+	fmt.Fprintf(writer, "│ %s/%s · %s: %s · %s: %s\n", report.Platform.OS, report.Platform.Arch, text.version, emptyDash(report.Version), text.collected, emptyDash(report.CollectedAt))
 	fmt.Fprintln(writer, c("36", "╰"+line+"╯"))
-	fmt.Fprintf(writer, "\n%s  %s · %s · %s\n", c("2", text.privacy), text.noTelemetry, text.noUpload, text.hidden)
 
-	fmt.Fprintf(writer, "\n%s\n", c("1;36", text.network))
+	consoleSection(writer, c, text.privacy)
+	fmt.Fprintf(writer, "  %s  %s  %s\n", statusBadge("pass", text, c), text.noTelemetry, text.noUpload)
+	fmt.Fprintf(writer, "  %s · %s: %d\n", text.hidden, text.endpoints, len(report.Privacy.Destinations))
+
+	consoleSection(writer, c, text.network)
 	fmt.Fprintf(writer, "  %-12s %d %s · %d %s · %d %s\n", text.interfaces, report.Network.Interfaces, text.total, report.Network.Up, text.up, report.Network.Loopback, text.loopback)
 	if report.PublicIPv4 != nil {
-		fmt.Fprintf(writer, "  %-12s %s · %s\n", text.publicIPv4, statusLabel(report.PublicIPv4.Status, text, c), hiddenAddressText(report.PublicIPv4, text))
+		fmt.Fprintf(writer, "  %-12s %-11s %s\n", text.publicIPv4, statusBadge(report.PublicIPv4.Status, text, c), hiddenAddressText(report.PublicIPv4, text))
 	}
 	if report.PublicIPv6 != nil {
-		fmt.Fprintf(writer, "  %-12s %s · %s\n", text.publicIPv6, statusLabel(report.PublicIPv6.Status, text, c), hiddenAddressText(report.PublicIPv6, text))
+		fmt.Fprintf(writer, "  %-12s %-11s %s\n", text.publicIPv6, statusBadge(report.PublicIPv6.Status, text, c), hiddenAddressText(report.PublicIPv6, text))
 	}
 	if report.IPProfile != nil {
 		profile := report.IPProfile
-		fmt.Fprintf(writer, "\n%s\n", c("1;36", text.ipProfile))
-		fmt.Fprintf(writer, "  %-12s %s · %s\n", text.provider, profile.Source, statusLabel(profile.Status, text, c))
+		consoleSection(writer, c, text.ipProfile+" · "+text.optIn)
+		fmt.Fprintf(writer, "  %-12s %s  %s\n", text.provider, profile.Source, statusBadge(profile.Status, text, c))
 		fmt.Fprintf(writer, "  %-12s %s\n", text.publicIP, profileAddressText(profile, text))
 		fmt.Fprintf(writer, "  %-12s %s · %s\n", text.asn, emptyDash(profile.ASN), emptyDash(profile.Organization))
 		fmt.Fprintf(writer, "  %-12s %s\n", text.location, profileLocation(profile))
 		fmt.Fprintf(writer, "  %-12s %s\n", text.typeLabel, translateType(profile.Classification, report.Language))
 		if profile.Risk != nil {
-			fmt.Fprintf(writer, "  %-12s %d/100 · %s · %s\n", text.risk, profile.Risk.Score, translateRisk(profile.Risk.Level, report.Language), profile.Risk.Method)
+			score := clampScore(profile.Risk.Score)
+			fmt.Fprintf(writer, "  %-12s %s %d/100 · %s\n", text.risk, riskBar(score, c), score, translateRisk(profile.Risk.Level, report.Language))
+			fmt.Fprintf(writer, "  %-12s %s\n", text.method, profile.Risk.Method)
 		}
 		if profile.Security == nil {
 			fmt.Fprintf(writer, "  %-12s %s\n", text.threatFlags, text.unavailable)
@@ -118,26 +126,38 @@ func renderConsole(writer io.Writer, report diagnostics.Report, color bool) {
 		}
 	}
 
-	fmt.Fprintf(writer, "\n%s\n", c("1;36", text.dns))
+	consoleSection(writer, c, text.dns)
+	if len(report.DNS) == 0 {
+		fmt.Fprintf(writer, "  %s\n", c("2", text.noProbes))
+	}
 	for _, probe := range report.DNS {
-		fmt.Fprintf(writer, "  %-20s %s  %d ms", probe.Target, statusLabel(probe.Status, text, c), probe.LatencyMS)
+		fmt.Fprintf(writer, "  %-28s %-11s %4d ms", probe.Target, statusBadge(probe.Status, text, c), probe.LatencyMS)
 		if probe.Detail != "" {
 			fmt.Fprintf(writer, " · %s", probe.Detail)
 		}
 		fmt.Fprintln(writer)
 	}
 
-	fmt.Fprintf(writer, "\n%s\n", c("1;36", text.https))
+	consoleSection(writer, c, text.https)
+	if len(report.HTTPS) == 0 {
+		fmt.Fprintf(writer, "  %s\n", c("2", text.noProbes))
+	}
 	for _, probe := range report.HTTPS {
-		fmt.Fprintf(writer, "  %-42s %s  %d ms", probe.Target, statusLabel(probe.Status, text, c), probe.LatencyMS)
+		fmt.Fprintf(writer, "  %-42s %-11s %4d ms", probe.Target, statusBadge(probe.Status, text, c), probe.LatencyMS)
 		if probe.Detail != "" {
 			fmt.Fprintf(writer, " · %s", probe.Detail)
 		}
 		fmt.Fprintln(writer)
 	}
 
-	fmt.Fprintf(writer, "\n%s  %s %d  %s %d  %s %d\n", c("1;36", text.summary), c("32", text.passed), report.Summary.Passed, c("33", text.warning), report.Summary.Warning, c("31", text.failed), report.Summary.Failed)
-	fmt.Fprintf(writer, "%s\n", c("2", text.footer))
+	consoleSection(writer, c, text.summary)
+	fmt.Fprintf(writer, "  %s %d   %s %d   %s %d\n", c("32", "✓ "+text.passed), report.Summary.Passed, c("33", "! "+text.warning), report.Summary.Warning, c("31", "× "+text.failed), report.Summary.Failed)
+	fmt.Fprintf(writer, "\n%s\n", c("2", text.footer))
+}
+
+func consoleSection(writer io.Writer, color func(string, string) string, title string) {
+	fmt.Fprintf(writer, "\n%s %s\n", color("1;36", "◆"), color("1;36", title))
+	fmt.Fprintf(writer, "  %s\n", color("2", "────────────────────────────────────────────────────────────"))
 }
 
 func renderMarkdown(writer io.Writer, report diagnostics.Report) error {
@@ -207,6 +227,49 @@ func statusLabel(value string, text translations, color func(string, string) str
 		return color("33", text.statusWarn)
 	default:
 		return color("31", text.statusFail)
+	}
+}
+
+func statusBadge(value string, text translations, color func(string, string) string) string {
+	return color(statusColor(value), "["+statusLabel(value, text, func(_ string, value string) string { return value })+"]")
+}
+
+func statusColor(value string) string {
+	switch value {
+	case "pass":
+		return "32"
+	case "warn":
+		return "33"
+	default:
+		return "31"
+	}
+}
+
+func clampScore(score int) int {
+	if score < 0 {
+		return 0
+	}
+	if score > 100 {
+		return 100
+	}
+	return score
+}
+
+func riskBar(score int, color func(string, string) string) string {
+	score = clampScore(score)
+	filled := (score*20 + 50) / 100
+	bar := strings.Repeat("█", filled) + strings.Repeat("░", 20-filled)
+	return color(statusColorForScore(score), bar)
+}
+
+func statusColorForScore(score int) string {
+	switch {
+	case score >= 80:
+		return "31"
+	case score >= 50:
+		return "33"
+	default:
+		return "32"
 	}
 }
 

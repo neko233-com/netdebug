@@ -1,0 +1,109 @@
+package main
+
+import (
+	"flag"
+	"fmt"
+	"os"
+	"runtime"
+	"strings"
+	"time"
+
+	"github.com/neko233-com/netdebug/internal/diagnostics"
+	"github.com/neko233-com/netdebug/internal/output"
+)
+
+const version = "0.1.0"
+
+func main() {
+	var (
+		format      string
+		family      string
+		showIP      bool
+		noPublicIP  bool
+		offline     bool
+		noColor     bool
+		jsonOutput  bool
+		markdownOut bool
+		compatYes   bool
+		timeout     time.Duration
+		showVersion bool
+	)
+
+	flag.StringVar(&format, "format", "console", "output format: console, json, markdown")
+	flag.StringVar(&family, "family", "all", "IP family: all, 4, 6")
+	flag.BoolVar(&showIP, "show-ip", false, "show public IP addresses; hidden by default")
+	flag.BoolVar(&noPublicIP, "no-public-ip", false, "skip public IP probes")
+	flag.BoolVar(&offline, "offline", false, "local-only mode; skip all outbound probes")
+	flag.BoolVar(&noColor, "no-color", false, "disable ANSI colors in console output")
+	flag.BoolVar(&jsonOutput, "j", false, "shorthand for --format json")
+	flag.BoolVar(&markdownOut, "m", false, "shorthand for --format markdown")
+	flag.BoolVar(&compatYes, "y", false, "compatibility flag; netdebug installs no dependencies")
+	flag.DurationVar(&timeout, "timeout", 10*time.Second, "overall probe timeout")
+	flag.BoolVar(&showVersion, "version", false, "show version")
+	flag.Usage = usage
+	flag.Parse()
+
+	if showVersion {
+		fmt.Printf("netdebug %s (%s/%s)\n", version, runtime.GOOS, runtime.GOARCH)
+		return
+	}
+	_ = compatYes // Kept for command-line compatibility with the reference script.
+
+	if jsonOutput {
+		format = "json"
+	}
+	if markdownOut {
+		format = "markdown"
+	}
+	format = strings.ToLower(strings.TrimSpace(format))
+	if format != "console" && format != "json" && format != "markdown" {
+		fail("invalid --format %q; use console, json, or markdown", format)
+	}
+	if family != "all" && family != "4" && family != "6" {
+		fail("invalid --family %q; use all, 4, or 6", family)
+	}
+	if timeout <= 0 {
+		fail("--timeout must be greater than zero")
+	}
+
+	report := diagnostics.Run(diagnostics.Config{
+		Family:      family,
+		ShowIP:      showIP,
+		PublicIP:    !noPublicIP,
+		Network:     !offline,
+		Timeout:     timeout,
+		ToolVersion: version,
+	})
+
+	color := format == "console" && !noColor && os.Getenv("NO_COLOR") == "" && isTerminal(os.Stdout)
+	if err := output.Render(os.Stdout, report, output.Options{Format: format, Color: color}); err != nil {
+		fail("render output: %v", err)
+	}
+}
+
+func usage() {
+	fmt.Fprintf(os.Stderr, `netdebug %s — privacy-first network diagnostics
+
+Usage:
+  netdebug [flags]
+
+Examples:
+  netdebug -y
+  netdebug --format json
+  netdebug --format markdown > report.md
+  netdebug -4 --show-ip
+
+Flags:
+`, version)
+	flag.PrintDefaults()
+}
+
+func fail(format string, args ...any) {
+	fmt.Fprintf(os.Stderr, "netdebug: "+format+"\n", args...)
+	os.Exit(2)
+}
+
+func isTerminal(file *os.File) bool {
+	info, err := file.Stat()
+	return err == nil && info.Mode()&os.ModeCharDevice != 0
+}

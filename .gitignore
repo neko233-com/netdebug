@@ -1,0 +1,17 @@
+# Build artifacts
+/netdebug
+/netdebug.exe
+/bin/
+/dist/
+
+# Local reports and secrets
+*.report
+*.jsonl
+.env
+.env.*
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

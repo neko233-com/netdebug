@@ -45,6 +45,7 @@ netdebug --offline
 - No telemetry.
 - No report links.
 - No account, proxy credential, hostname, interface address, or local address sent in request payloads.
+- Environment proxy settings are not inherited, so proxy credentials are not forwarded.
 - Public IP is hidden in console/JSON/Markdown by default; `--show-ip` is explicit.
 - Public IP probe services necessarily observe the transport source IP. Use `--no-public-ip` to skip those probes.
 - `--offline` skips every outbound probe and inspects only local interface counts.

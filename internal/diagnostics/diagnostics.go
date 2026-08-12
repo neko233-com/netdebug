@@ -189,7 +189,7 @@ func request(ctx context.Context, target string) Probe {
 		return probe
 	}
 	request.Header.Set("User-Agent", "netdebug/"+versionForHeader())
-	response, err := (&http.Client{Timeout: 0}).Do(request)
+	response, err := newHTTPClient().Do(request)
 	probe.LatencyMS = elapsedMS(start)
 	if err != nil {
 		probe.Status = statusForError(err)
@@ -218,7 +218,7 @@ func publicIP(ctx context.Context, target string, showIP bool) IPProbe {
 		return probe
 	}
 	request.Header.Set("User-Agent", "netdebug/"+versionForHeader())
-	response, err := (&http.Client{Timeout: 0}).Do(request)
+	response, err := newHTTPClient().Do(request)
 	probe.LatencyMS = elapsedMS(start)
 	if err != nil {
 		probe.Status = statusForError(err)
@@ -322,6 +322,14 @@ func hostOf(target string) string {
 		target = target[:index]
 	}
 	return target
+}
+
+func newHTTPClient() *http.Client {
+	return &http.Client{
+		// Direct transport prevents inherited proxy URLs from forwarding
+		// credentials or user-specific proxy metadata.
+		Transport: &http.Transport{Proxy: nil, ForceAttemptHTTP2: true},
+	}
 }
 
 func versionForHeader() string {

@@ -218,14 +218,14 @@ func fastestURL(ctx context.Context, urls []string) (string, error) {
 				results <- result{url: url, err: err}
 				return
 			}
-			request.Header.Set("Range", "bytes=0-0")
+			request.Header.Set("Range", "bytes=0-65535")
 			request.Header.Set("User-Agent", "netdebug-updater")
 			response, err := client().Do(request)
 			if err != nil {
 				results <- result{url: url, err: err}
 				return
 			}
-			_, readErr := io.CopyN(io.Discard, response.Body, 1024)
+			_, readErr := io.CopyN(io.Discard, response.Body, 64<<10)
 			_ = response.Body.Close()
 			if response.StatusCode < 200 || response.StatusCode >= 400 {
 				results <- result{url: url, err: fmt.Errorf("status %s", response.Status)}

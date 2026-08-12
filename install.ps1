@@ -3,7 +3,8 @@ param(
     [string]$Version = $env:NETDEBUG_VERSION,
     [string]$Repo = $(if ($env:NETDEBUG_REPO) { $env:NETDEBUG_REPO } else { "neko233-com/netdebug" }),
     [string]$InstallDir = $(if ($env:NETDEBUG_INSTALL_DIR) { $env:NETDEBUG_INSTALL_DIR } else { Join-Path $env:LOCALAPPDATA "netdebug\bin" }),
-    [switch]$NoPathUpdate
+    [switch]$NoPathUpdate,
+    [switch]$Run
 )
 
 $ErrorActionPreference = "Stop"
@@ -97,4 +98,10 @@ try {
 }
 finally {
     Remove-Item -LiteralPath $tempDir -Recurse -Force -ErrorAction SilentlyContinue
+}
+
+if ($Run) {
+    Write-Host "Running netdebug report"
+    & (Join-Path $InstallDir "netdebug.exe")
+    exit $LASTEXITCODE
 }

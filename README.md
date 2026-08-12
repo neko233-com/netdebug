@@ -25,6 +25,21 @@ PowerShell:
 irm https://raw.githubusercontent.com/neko233-com/netdebug/main/install.ps1 | iex
 ```
 
+One-line install and report, equivalent to the reference command:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/neko233-com/netdebug/main/install.sh | sh -s -- --run
+# -y is also accepted: curl -fsSL https://raw.githubusercontent.com/neko233-com/netdebug/main/install.sh | sh -s -- -y
+```
+
+PowerShell:
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/neko233-com/netdebug/main/install.ps1))) -Run
+```
+
+After installation, simply running `netdebug` prints the same console report.
+
 Installers are idempotent. They install release binaries, verify `checksums.txt`, register `NETDEBUG_HOME`, and update PATH for future shells. Set `NETDEBUG_DIRECT_ONLY=1` to disable mirrors, or `NETDEBUG_UPDATE_MIRRORS` to provide comma-separated mirror prefixes.
 
 ## Update

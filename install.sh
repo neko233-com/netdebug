@@ -4,9 +4,23 @@ set -eu
 REPO="${NETDEBUG_REPO:-neko233-com/netdebug}"
 VERSION="${NETDEBUG_VERSION:-latest}"
 INSTALL_DIR="${NETDEBUG_INSTALL_DIR:-}"
+RUN_AFTER_INSTALL=0
 
 say() { printf '%s\n' "$*"; }
 die() { printf 'netdebug installer: %s\n' "$*" >&2; exit 1; }
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --run|-y) RUN_AFTER_INSTALL=1 ;;
+    --help|-h)
+      say "Usage: install.sh [--run|-y]"
+      say "  --run, -y  run netdebug immediately after installation"
+      exit 0
+      ;;
+    *) die "unknown argument: $1" ;;
+  esac
+  shift
+done
 
 command -v curl >/dev/null 2>&1 || die "curl is required"
 command -v tar >/dev/null 2>&1 || die "tar is required"
@@ -174,3 +188,8 @@ case ":${PATH:-}:" in
 esac
 say "Environment registered: NETDEBUG_HOME=$INSTALL_DIR"
 say "New shells load: $NETDEBUG_PROFILE_FILE"
+
+if [ "$RUN_AFTER_INSTALL" -eq 1 ]; then
+  say "Running netdebug report"
+  "$INSTALL_DIR/netdebug"
+fi
